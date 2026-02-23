@@ -1,5 +1,6 @@
 const http = require('http');
 const { spawn } = require('child_process');
+const url = require('url');
 
 const AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
 const PORT = process.env.PORT || 10000;
@@ -21,19 +22,27 @@ child.on('exit', (code) => {
 });
 
 const server = http.createServer((req, res) => {
-  if (AUTH_TOKEN) {
-    const auth = req.headers.authorization;
-    if (auth !== `Bearer ${AUTH_TOKEN}`) {
+  const parsed = url.parse(req.url, true);
+
+  // Check token on SSE endpoint (initial connection)
+  // The /message endpoint is session-protected by mcp-proxy
+  if (AUTH_TOKEN && parsed.pathname === '/sse') {
+    if (parsed.query.token !== AUTH_TOKEN) {
       res.writeHead(401, { 'Content-Type': 'text/plain' });
       res.end('Unauthorized');
       return;
     }
   }
 
+  // Strip the token query param before forwarding to mcp-proxy
+  const forwardPath = parsed.pathname === '/sse'
+    ? '/sse'
+    : req.url;
+
   const options = {
     hostname: '127.0.0.1',
     port: PROXY_PORT,
-    path: req.url,
+    path: forwardPath,
     method: req.method,
     headers: { ...req.headers, host: `127.0.0.1:${PROXY_PORT}` }
   };
