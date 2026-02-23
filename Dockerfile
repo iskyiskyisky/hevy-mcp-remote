@@ -1,5 +1,5 @@
 FROM node:20-slim
 
-RUN npm install -g hevy-mcp supergateway
+RUN npm install -g hevy-mcp mcp-proxy
 
-CMD ["sh", "-c", "supergateway --stdio 'hevy-mcp' --port ${PORT:-10000}"]
+CMD ["sh", "-c", "mcp-proxy --port ${PORT:-10000} -- hevy-mcp"]
